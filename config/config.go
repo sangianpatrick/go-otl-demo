@@ -13,6 +13,9 @@ type Config struct {
 	Jaeger struct {
 		Host string
 	}
+	JSONPlaceHolderAPI struct {
+		Host string
+	}
 }
 
 func (c *Config) application() *Config {
@@ -37,9 +40,17 @@ func (c *Config) jaeger() *Config {
 	return c
 }
 
+func (c *Config) jsonPlaceholderAPI() *Config {
+	host := os.Getenv("JSON_PLACEHOLDER_API_HOST")
+	c.JSONPlaceHolderAPI.Host = host
+
+	return c
+}
+
 func load() *Config {
 	c := new(Config)
-	return c.application().jaeger()
+	return c.application().
+		jaeger().jsonPlaceholderAPI()
 }
 
 func Get() *Config {
