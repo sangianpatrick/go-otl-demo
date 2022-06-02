@@ -22,6 +22,7 @@ Run the code bellow with environment variable:
 ```sh
 APPLICATION_NAME=application-name \
 APPLICATION_PORT=9000 \
+APPLICATION_ENVIRONMENT=development \
 JAEGER_HOST=http://localhost:14268/api/traces \
 JSON_PLACEHOLDER_API_HOST=https://jsonplaceholder.typicode.com \
 go run cmd/main.go

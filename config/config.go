@@ -7,8 +7,9 @@ import (
 
 type Config struct {
 	Application struct {
-		Name string
-		Port int
+		Name       string
+		Port       int
+		Enviroment string
 	}
 	Jaeger struct {
 		Host string

@@ -38,7 +38,6 @@ func init() {
 
 func main() {
 	// exporter, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
-	fmt.Println(cfg.Jaeger.Host)
 	exporter, _ := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(cfg.Jaeger.Host)))
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -46,7 +45,7 @@ func main() {
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(cfg.Application.Name),
-			attribute.String("environment", "production"),
+			attribute.String("environment", cfg.Application.Enviroment),
 		)),
 	)
 	otel.SetTracerProvider(tp)
