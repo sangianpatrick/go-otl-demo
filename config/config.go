@@ -23,12 +23,14 @@ func (c *Config) application() *Config {
 	var port int = 9000 // default port
 	name := os.Getenv("APPLICATION_NAME")
 	desiredPort, _ := strconv.Atoi(os.Getenv("APPLICATION_PORT"))
+	environment := os.Getenv("APPLICATION_ENVIRONMENT")
 	if desiredPort > 0 {
 		port = desiredPort
 	}
 
 	c.Application.Name = name
 	c.Application.Port = port
+	c.Application.Enviroment = environment
 
 	return c
 }

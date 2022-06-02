@@ -10,10 +10,29 @@ import (
 
 type AlbumService interface {
 	GetMany(ctx context.Context) (resp response.Response)
+	Add(ctx context.Context, params CreateAlbumParams) (resp response.Response)
 }
 
 type albumServiceImpl struct {
 	repository AlbumRepository
+}
+
+// Add implements AlbumService
+func (s *albumServiceImpl) Add(ctx context.Context, params CreateAlbumParams) (resp response.Response) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	// construct new album
+	newAlbum := Album{
+		UserID: 1,
+		Title:  params.Title,
+	}
+
+	if err := s.repository.Save(ctx, newAlbum); err != nil {
+		return response.ResponseError(response.StatusInternalServerError, err, nil, nil, "")
+	}
+
+	return response.ResponseSuccess(response.StatusCreated, newAlbum, nil, "")
 }
 
 func (s *albumServiceImpl) GetMany(ctx context.Context) (resp response.Response) {

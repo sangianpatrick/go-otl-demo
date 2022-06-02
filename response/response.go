@@ -6,46 +6,6 @@ import (
 	"net/http"
 )
 
-// global
-var gsm *statusMapping
-
-type statusMapping struct {
-	mapping map[string]int
-}
-
-func newStatusMapping() *statusMapping {
-	return &statusMapping{
-		mapping: make(map[string]int),
-	}
-}
-
-func (sm *statusMapping) set(status string, code int) {
-	sm.mapping[status] = code
-}
-
-// get will return code by set status, it will return 500 (internal server error) when status is not already mapped.
-func (sm *statusMapping) get(status string) (code int) {
-	code, ok := sm.mapping[status]
-	if ok {
-		return code
-	}
-	return http.StatusInternalServerError
-}
-
-func init() {
-
-	if gsm == nil {
-		gsm := newStatusMapping()
-		gsm.set(StatusOK, http.StatusOK)
-		gsm.set(StatusCreated, http.StatusCreated)
-		gsm.set(StatusNotFound, http.StatusNotFound)
-		gsm.set(StatusRequestTimeout, http.StatusRequestTimeout)
-		gsm.set(StatusInsufficientBalance, http.StatusForbidden) // register custom status
-		// register more if any
-	}
-
-}
-
 type Response interface {
 	Error() error
 	WriteJSON(w http.ResponseWriter) error
@@ -63,6 +23,7 @@ type response struct {
 
 func (r response) WriteJSON(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(r.httpStatusCode)
 	return json.NewEncoder(w).Encode(r)
 }
 
@@ -105,9 +66,13 @@ func ResponseError(status string, err error, data, meta interface{}, message str
 		err = fmt.Errorf("unexpected error")
 	}
 
+	if message != "" {
+		m = &message
+	}
+
 	resp := response{
 		err:            err,
-		httpStatusCode: gsm.get(status),
+		httpStatusCode: getCodeByStatus(status),
 		Status:         status,
 		Message:        m,
 		Data:           data,
@@ -115,4 +80,31 @@ func ResponseError(status string, err error, data, meta interface{}, message str
 	}
 
 	return resp
+}
+
+func getCodeByStatus(status string) int {
+	switch status {
+	case StatusOK:
+		return http.StatusOK
+	case StatusCreated:
+		return http.StatusCreated
+	case StatusNotFound:
+		return http.StatusNotFound
+	case StatusInternalServerError:
+		return http.StatusInternalServerError
+	case StatusForbidden:
+		return http.StatusForbidden
+	case StatusRequestTimeout:
+		return http.StatusRequestTimeout
+	case StatusBadGateway:
+		return http.StatusBadGateway
+	case StatusBadRequest:
+		return http.StatusBadRequest
+	case StatusNotImplemented:
+		return http.StatusNotImplemented
+	case StatusInsufficientBalance:
+		return http.StatusForbidden
+	default:
+		return http.StatusInternalServerError
+	}
 }

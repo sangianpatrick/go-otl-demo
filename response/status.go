@@ -8,6 +8,8 @@ const (
 	StatusForbidden           string = "FORBIDDEN"
 	StatusRequestTimeout      string = "REQUEST_TIMEOUT"
 	StatusBadGateway          string = "BAD_GATEWAY"
+	StatusBadRequest          string = "BAD_REQUEST"
+	StatusNotImplemented      string = "NOT_IMPLEMENTED"
 	StatusInsufficientBalance string = "INSUFFICIENT_BALANCE" // custom status
 	// add more if any
 )

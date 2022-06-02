@@ -16,6 +16,7 @@ var (
 )
 
 type AlbumRepository interface {
+	Save(ctx context.Context, album Album) (err error)
 	FindMany(ctx context.Context) (bunchOfAlbums []Album, err error)
 }
 
@@ -23,6 +24,14 @@ type albumRepositoryImpl struct {
 	logger *logrus.Logger
 	host   string
 	c      *http.Client
+}
+
+// Save implements AlbumRepository
+func (s *albumRepositoryImpl) Save(ctx context.Context, album Album) (err error) {
+	err = exception.ErrNotImplemented
+	s.logger.WithContext(ctx).Error(err)
+
+	return
 }
 
 func (r *albumRepositoryImpl) FindMany(ctx context.Context) (bunchOfAlbums []Album, err error) {
