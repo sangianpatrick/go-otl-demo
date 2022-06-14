@@ -28,8 +28,11 @@ type albumRepositoryImpl struct {
 
 // Save implements AlbumRepository
 func (s *albumRepositoryImpl) Save(ctx context.Context, album Album) (err error) {
+	query := "INSERT INTO table SET title = ?"
 	err = exception.ErrNotImplemented
-	s.logger.WithContext(ctx).Error(err)
+	s.logger.WithContext(ctx).WithFields(logrus.Fields{
+		"query": query,
+	}).Error(err)
 
 	return
 }

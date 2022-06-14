@@ -1,0 +1,85 @@
+version: "3"
+services:
+  go-otl-demo:
+    build:
+      dockerfile: Dockerfile
+      context: ./
+    environment:
+      - APPLICATION_NAME=go-otl-demo
+      - APPLICATION_PORT=9191
+      - APPLICATION_ENVIRONMENT=development
+      - JSON_PLACEHOLDER_API_HOST=https://jsonplaceholder.typicode.com
+      - OPENTELEMETRY_COLLECTOR_HOST=otel-collector:4317
+    ports:
+      - "9191:9191"
+    depends_on:
+      - otel-collector
+    networks: 
+      - esnet
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14268"
+      - "14250"
+    networks: 
+      - esnet
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib-dev:latest
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "1888:1888" # pprof extension
+      - "8888:8888" # Prometheus metrics exposed by the collector
+      - "8889:8889" # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "55679:55679" # zpages extension
+      - "4317:4317"        # OTLP gRPC receiver
+    depends_on:
+      - jaeger
+      - apm-server
+    networks: 
+      - esnet
+  
+  elasticsearch:
+    image: elasticsearch:7.17.0
+    container_name: elasticsearch
+    environment:
+      - "discovery.type=single-node"
+    volumes:
+      - ./.elastic/data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+
+  kibana:
+    image: kibana:7.17.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    networks:
+      - esnet
+
+  apm-server:
+    container_name: apm-server-container
+    user: apm-server
+    image: docker.elastic.co/apm/apm-server:7.17.0
+    ports:
+      - "8200:8200"
+    depends_on: ["elasticsearch", "kibana"]
+    volumes:
+      - ./.elastic/apm-config/apm-server.yml:/usr/share/apm-server/apm-server.yml
+    command: /usr/share/apm-server/apm-server -e -c /usr/share/apm-server/apm-server.yml -E apm-server.host=apm-server:8200 --strict.perms=false
+    networks: 
+      - esnet
+#     # healthcheck:
+#     #   test: ["CMD", "curl", "-s", "-f", "http://localhost:7200/polls"]
+#     #   retries: 6
+networks:
+  esnet:
+    driver: bridge
+

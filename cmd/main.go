@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
+	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,18 +19,11 @@ import (
 	"github.com/uptrace/opentelemetry-go-extra/otellogrus"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 
-	"go.opentelemetry.io/otel/attribute"
 	// "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
-	"go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
-
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/sangianpatrick/go-otl-demo/monitoring"
 )
 
 var cfg *config.Config
@@ -38,23 +34,8 @@ func init() {
 
 func main() {
 	// exporter, _ := stdouttrace.New(stdouttrace.WithPrettyPrint())
-	exporter, _ := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(cfg.Jaeger.Host)))
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(cfg.Application.Name),
-			attribute.String("environment", cfg.Application.Enviroment),
-		)),
-	)
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(
-		propagation.NewCompositeTextMapPropagator(
-			propagation.TraceContext{},
-			propagation.Baggage{},
-		),
-	)
+	motel := monitoring.NewOpenTelemetry(cfg.Application.Name, cfg.Opentelemetry.CollectorHost, cfg.Application.Enviroment)
+	motel.Start()
 
 	logger := logrus.New()
 	logger.AddHook(otellogrus.NewHook(otellogrus.WithLevels(
@@ -63,6 +44,17 @@ func main() {
 		logrus.ErrorLevel,
 		logrus.WarnLevel,
 	)))
+	logger.SetReportCaller(true)
+	logger.SetFormatter(&logrus.JSONFormatter{
+		TimestampFormat: time.RFC3339,
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			s := strings.Split(f.Function, ".")
+			funcname := s[len(s)-1]
+			_, filename := path.Split(f.File)
+			filename = fmt.Sprintf("%s:%d", filename, f.Line)
+			return funcname, filename
+		},
+	})
 
 	httpClient := &http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
@@ -92,5 +84,5 @@ func main() {
 	defer cancel()
 
 	httpServer.Shutdown(shutdownCtx)
-	tp.Shutdown(shutdownCtx)
+	motel.Stop()
 }

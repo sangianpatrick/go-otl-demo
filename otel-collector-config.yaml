@@ -1,0 +1,53 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+
+exporters:
+
+  logging:
+
+  otlp:
+    endpoint: 0.0.0.0:4317
+
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+
+  otlp/elastic: 
+    endpoint: apm-server:8200
+    tls:
+      insecure: true
+
+processors:
+  # attributes/rp:
+  #   actions:
+  #     # Turn the captured client IP address from placeholder into the standard attribute format http.client_ip.
+  #     - key: http_client_ip
+  #       action: delete
+  batch:
+
+extensions:
+  health_check:
+  pprof:
+    endpoint: :1888
+  zpages:
+    endpoint: :55679
+
+service:
+  extensions: [pprof, zpages, health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      # processors: [batch]
+      processors: [batch]
+      exporters: [jaeger, otlp/elastic]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/elastic]
+    logs:
+      receivers: [otlp]
+      # processors: [batch]
+      exporters: [otlp]

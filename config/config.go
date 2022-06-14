@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 )
@@ -11,11 +13,22 @@ type Config struct {
 		Port       int
 		Enviroment string
 	}
-	Jaeger struct {
-		Host string
+	Opentelemetry struct {
+		CollectorHost string
 	}
 	JSONPlaceHolderAPI struct {
 		Host string
+	}
+	Mariadb struct {
+		Driver             string
+		Host               string
+		Port               string
+		Username           string
+		Password           string
+		Database           string
+		DSN                string
+		MaxOpenConnections int
+		MaxIdleConnections int
 	}
 }
 
@@ -35,10 +48,10 @@ func (c *Config) application() *Config {
 	return c
 }
 
-func (c *Config) jaeger() *Config {
-	host := os.Getenv("JAEGER_HOST")
+func (c *Config) opentelemetry() *Config {
+	collectorHost := os.Getenv("OPENTELEMETRY_COLLECTOR_HOST")
 
-	c.Jaeger.Host = host
+	c.Opentelemetry.CollectorHost = collectorHost
 
 	return c
 }
@@ -50,10 +63,38 @@ func (c *Config) jsonPlaceholderAPI() *Config {
 	return c
 }
 
+func (c *Config) mariadb() *Config {
+	host := os.Getenv("MARIADB_HOST")
+	port := os.Getenv("MARIADB_PORT")
+	username := os.Getenv("MARIADB_USERNAME")
+	password := os.Getenv("MARIADB_PASSWORD")
+	database := os.Getenv("MARIADB_DATABASE")
+	maxOpenConnections, _ := strconv.ParseInt(os.Getenv("MARIADB_MAX_OPEN_CONNECTIONS"), 10, 64)
+	maxIdleConnections, _ := strconv.ParseInt(os.Getenv("MARIADB_MAX_IDLE_CONNECTIONS"), 10, 64)
+
+	dbConnectionString := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", username, password, host, port, database)
+	connVal := url.Values{}
+	connVal.Add("parseTime", "1")
+	connVal.Add("loc", "Asia/Jakarta")
+	dsn := fmt.Sprintf("%s?%s", dbConnectionString, connVal.Encode())
+
+	c.Mariadb.Driver = "mysql"
+	c.Mariadb.Host = host
+	c.Mariadb.Port = port
+	c.Mariadb.Username = username
+	c.Mariadb.Password = password
+	c.Mariadb.Database = database
+	c.Mariadb.DSN = dsn
+	c.Mariadb.MaxOpenConnections = int(maxOpenConnections)
+	c.Mariadb.MaxIdleConnections = int(maxIdleConnections)
+
+	return c
+}
+
 func load() *Config {
 	c := new(Config)
 	return c.application().
-		jaeger().jsonPlaceholderAPI()
+		opentelemetry().jsonPlaceholderAPI().mariadb()
 }
 
 func Get() *Config {
